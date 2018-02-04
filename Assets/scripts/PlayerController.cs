@@ -23,12 +23,16 @@ public enum PlayerAnimationState
 
 public class PlayerController : MonoBehaviour
 {
-  public bool isGrounded { get; set; }
+  public bool isGrounded;
+  public bool isWall;
   // Use this for initialization
+  public float airSpeed = 0.1f;
   public float walkSpeed = 5;
   public float runSpeed = 10;
   public float sideStepSpeed = 10;
   public float jumpSpeed = 2;
+  public int jumpCount = 3;
+  public int defaultJumpCount = 3;
   public GameObject targetModel;
   public PlayerAnimationState PlayerState
   {
@@ -49,102 +53,135 @@ public class PlayerController : MonoBehaviour
 
   }
 
-  // Update is called once per frame
   void Update()
   {
-    //var x = Input.GetAxis("Horizontal") * Time.deltaTime * 150.0f;
-    //var z = Input.GetAxis("Vertical") * Time.deltaTime * 3.0f;
-
-    //transform.Rotate(0, x, 0);
-    //transform.Translate(0, 0, z);
-
 
   }
   private void OnCollisionEnter(Collision collision)
   {
-    isGrounded = true;
+    checkCollision(collision);
+  }
+  private void OnCollisionStay(Collision collision)
+  {
+    checkCollision(collision);
+
   }
   private void OnCollisionExit(Collision collision)
   {
-  }
-
-  void FixedUpdate()
-  {
-   
-    var movementSpeed = walkSpeed;
-
-    if (Input.GetKey(KeyCode.LeftShift) && !Input.GetMouseButton(1))
-    {
-      movementSpeed = runSpeed;
-    }
-
-    if (isGrounded && Input.GetKey(KeyCode.Space))
+    var relativePosition = transform.InverseTransformPoint(collision.transform.position);
+    if (relativePosition.y < 0)
     {
       isGrounded = false;
-      this.GetComponent<Rigidbody>().AddForce(new Vector3(0, jumpSpeed, 0));
+    }
+    if (relativePosition.x != 0 && relativePosition.z != 0)
+    {
+      isWall = false;
+    }
+  }
+  private void checkCollision(Collision collision) {
+    var relativePosition = transform.InverseTransformPoint(collision.transform.position);
+    if (relativePosition.y < 0)
+    {
+      isGrounded = true;
+      jumpCount = defaultJumpCount;
+    }
+    if (relativePosition.x != 0 && relativePosition.z != 0)
+    {
+      isWall = true;
+    } else
+    {
+      isWall = false;
     }
 
-    float horizontal = Input.GetAxis("Horizontal") * sideStepSpeed;// * Time.deltaTime;
-    float vertical = Input.GetAxis("Vertical") * movementSpeed;// * Time.deltaTime;
-    
-    if (isGrounded)
-    {
-      if (horizontal != 0)
-      {
+  }
+  void FixedUpdate()
+  {
 
-        //Debug.Log(string.Format("horri {0}", horizontal));
-        Vector3 v3SideForce = horizontal * transform.right;
-        this.GetComponent<Rigidbody>().AddForce(v3SideForce);
-      }
-      if (horizontal > 0)
+    var movementSpeed = runSpeed;
+
+    //if (Input.GetKey(KeyCode.LeftShift) && !Input.GetMouseButton(1))
+    //{
+    //  movementSpeed = runSpeed;
+    //}
+    if(!isGrounded)
+    {
+      movementSpeed = airSpeed;
+    } if(Input.GetKey(KeyCode.LeftShift)) 
+    {
+      movementSpeed = walkSpeed;
+    }
+
+    if ((isGrounded || isWall) && Input.GetKeyDown(KeyCode.Space))
+    {
+
+      jumpCount--;
+      if (jumpCount > -1)
       {
-        PlayerState = PlayerAnimationState.StepLeft;
+        //isGrounded = false;
+        this.GetComponent<Rigidbody>().AddForce(new Vector3(0, jumpSpeed, 0));
+      }
+    }
+
+    float horizontal = Input.GetAxis("Horizontal") * movementSpeed;// * Time.deltaTime;
+    float vertical = Input.GetAxis("Vertical") * movementSpeed;// * Time.deltaTime;
+
+
+    if (horizontal != 0)
+    {
+
+      //Debug.Log(string.Format("horri {0}", horizontal));
+      Vector3 v3SideForce = horizontal * transform.right;
+      this.GetComponent<Rigidbody>().transform.position += v3SideForce;
+    }
+    if (horizontal > 0)
+    {
+      PlayerState = PlayerAnimationState.StepLeft;
+    }
+    else
+    {
+      PlayerState = PlayerAnimationState.StepRight;
+
+    }
+    Vector3 v3Force = vertical * transform.forward;
+    this.GetComponent<Rigidbody>().transform.position += v3Force;
+    //transform.Translate(0, 0, vertical);
+    if (vertical < 0)
+    {
+      PlayerState = PlayerAnimationState.WalkingBackwards;
+    }
+    else if (horizontal == 0 && vertical == 0)
+    {
+      if (Input.GetMouseButton(1))
+      {
+        PlayerState = PlayerAnimationState.Aiming;
       }
       else
       {
-        PlayerState = PlayerAnimationState.StepRight;
+        PlayerState = PlayerAnimationState.Idle;
+      }
 
-      }
-      Vector3 v3Force = vertical * transform.forward;
-      this.GetComponent<Rigidbody>().AddForce(v3Force);
-      //transform.Translate(0, 0, vertical);
-      if (vertical < 0)
+    }
+    else
+    {
+      if (Input.GetKey(KeyCode.LeftShift))
       {
-        PlayerState = PlayerAnimationState.WalkingBackwards;
+        PlayerState = PlayerAnimationState.Walking;
       }
-      else if (horizontal == 0 && vertical == 0)
+      else
       {
         if (Input.GetMouseButton(1))
         {
           PlayerState = PlayerAnimationState.Aiming;
-        } else
-        {
-          PlayerState = PlayerAnimationState.Idle;
-        }
-
-      }
-      else
-      {
-        if (Input.GetKey(KeyCode.LeftShift) && !Input.GetMouseButton(1))
-        {
-          PlayerState = PlayerAnimationState.Running;
         }
         else
         {
-          if (Input.GetMouseButton(1))
-          {
-            PlayerState = PlayerAnimationState.Aiming;
-          }
-          else
-          {
-            PlayerState = PlayerAnimationState.Walking;
-          }
+          PlayerState = PlayerAnimationState.Running;
         }
-
-
       }
+
+
     }
-    else
+    if (!isGrounded)
     {
       PlayerState = PlayerAnimationState.Jumping;
     }
