@@ -23,6 +23,7 @@ public enum PlayerAnimationState
 
 public class PlayerController : MonoBehaviour
 {
+  List<GameObject> _isWall = new List<GameObject>();
   public bool isGrounded;
   public bool isWall;
   // Use this for initialization
@@ -59,39 +60,70 @@ public class PlayerController : MonoBehaviour
   }
   private void OnCollisionEnter(Collision collision)
   {
-    checkCollision(collision);
-  }
-  private void OnCollisionStay(Collision collision)
-  {
-    checkCollision(collision);
+    //collision.
+    var relativePosition = transform.InverseTransformPoint(collision.contacts[0].point);
+    var angle = Vector3.Angle(relativePosition, transform.up);
 
-  }
-  private void OnCollisionExit(Collision collision)
-  {
-    var relativePosition = transform.InverseTransformPoint(collision.transform.position);
-    if (relativePosition.y < 0)
-    {
-      isGrounded = false;
-    }
-    if (relativePosition.x != 0 && relativePosition.z != 0)
-    {
-      isWall = false;
-    }
-  }
-  private void checkCollision(Collision collision) {
-    var relativePosition = transform.InverseTransformPoint(collision.transform.position);
-    if (relativePosition.y < 0)
+    if (angle > 80)
     {
       isGrounded = true;
       jumpCount = defaultJumpCount;
     }
-    if (relativePosition.x != 0 && relativePosition.z != 0)
+    else
     {
+      if(!_isWall.Contains(collision.gameObject))
+      {
+        _isWall.Add(collision.gameObject);
+      }
       isWall = true;
-    } else
+    }
+    Debug.Log("collision enter" + angle);
+  }
+  private void OnCollisionExit(Collision collision)
+  {
+    //TODO: need to exit
+    if(_isWall.Contains(collision.gameObject))
     {
       isWall = false;
+    } else
+    {
+      isGrounded = false;
     }
+
+    //var relativePosition = transform.InverseTransformPoint(collision.contacts[0].point);
+    //var angle = Vector3.Angle(relativePosition, transform.up);
+    //Debug.Log("collision exit" + angle);
+    //if (angle > 80)
+    //{
+    //  isGrounded = false;
+    //  //jumpCount = defaultJumpCount;
+    //}
+    //else
+    //{
+    //  isWall = false;
+    //}
+
+    //var relativePosition = transform.InverseTransformPoint(collision.transform.position);
+    //if (relativePosition.y < 0)
+    //{
+    //  isGrounded = false;
+    //}
+    //if (relativePosition.x != 0 && relativePosition.z != 0)
+    //{
+    //  isWall = false;
+    //}
+  }
+  //private Vector3 avg(ContactPoint[] cp)
+  //{
+  //  Vector3 v = Vector3.zero;
+  //  foreach(var c in cp)
+  //  {
+  //    v += c.point;
+  //  }
+  //  return v / cp.Length;
+  //}
+  private void checkCollision(Collision collision) {
+    
 
   }
   void FixedUpdate()
@@ -118,7 +150,13 @@ public class PlayerController : MonoBehaviour
       if (jumpCount > -1)
       {
         //isGrounded = false;
-        this.GetComponent<Rigidbody>().AddForce(new Vector3(0, jumpSpeed, 0));
+        if (!isWall)
+        {
+          this.GetComponent<Rigidbody>().AddForce(Quaternion.AngleAxis(-45, transform.up) * new Vector3(0, jumpSpeed, 0));
+        } else
+        {
+          this.GetComponent<Rigidbody>().AddForce(new Vector3(0, jumpSpeed, 0));
+        }
       }
     }
 
