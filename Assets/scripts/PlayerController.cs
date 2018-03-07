@@ -34,7 +34,9 @@ public class PlayerController : MonoBehaviour
   public float jumpSpeed = 2;
   public int jumpCount = 3;
   public int defaultJumpCount = 3;
+  public float testRayLength = 0.5f;
   public GameObject targetModel;
+  private Rigidbody rigidBody;
   public PlayerAnimationState PlayerState
   {
     get
@@ -51,83 +53,73 @@ public class PlayerController : MonoBehaviour
   }
   void Start()
   {
-
+    rigidBody = this.GetComponent<Rigidbody>();
   }
 
   void Update()
   {
 
-  }
-  private void OnCollisionEnter(Collision collision)
-  {
-    //collision.
-    var relativePosition = transform.InverseTransformPoint(collision.contacts[0].point);
-    var angle = Vector3.Angle(relativePosition, transform.up);
 
-    if (angle > 80)
+  }
+
+
+  bool testLine(Vector3 left, Vector3 right)
+  {
+    var test = Physics.Linecast(left, right);
+    Debug.DrawLine(left, right, (test) ? Color.red : Color.white);
+    return test;
+  }
+
+  void FixedUpdate()
+  {
+
+    var boxCollider = this.GetComponent<BoxCollider>();
+    var depth = (boxCollider.size.z / 2);
+    var height = boxCollider.size.y / 2;
+    var width = boxCollider.size.x / 2;
+    var forward = (depth * transform.forward);
+
+    var innerCenter = rigidBody.worldCenterOfMass + forward;
+    var innerCenterLeft = innerCenter - (width * transform.right);
+    var innerCenterRight = innerCenter + (width * transform.right);
+
+    var testCenter = testLine(innerCenter, innerCenter + (0.1f * transform.forward));
+    var testCenterLeft = testLine(innerCenterLeft, innerCenterLeft + (0.1f * transform.forward));
+    var testCenterRight = testLine(innerCenterRight, innerCenterRight + (0.1f * transform.forward));
+
+
+    var innerBottom = innerCenter - ((height - 0.5f) * transform.up);
+    var innerBottomLeft = innerBottom - (width * transform.right);
+    var innerBottomRight = innerBottom + (width * transform.right);
+
+    var testBottom = testLine(innerBottom, innerBottom + (0.1f * transform.forward));
+    var testBottomLeft = testLine(innerBottomLeft, innerBottomLeft + (0.1f * transform.forward));
+    var testBottomRight = testLine(innerBottomRight, innerBottomRight + (0.1f * transform.forward));
+
+    var center = testCenter || testCenterLeft || testCenterRight;
+    var bottom = testBottom || testBottomLeft || testBottomRight;
+
+    var down = testLine(rigidBody.worldCenterOfMass, rigidBody.worldCenterOfMass - ((height + 0.2f) * transform.up));
+
+    if (down && !isGrounded)
     {
       isGrounded = true;
       jumpCount = defaultJumpCount;
     }
-    else
-    {
-      if(!_isWall.Contains(collision.gameObject))
-      {
-        _isWall.Add(collision.gameObject);
-      }
-      isWall = true;
-    }
-    Debug.Log("collision enter" + angle);
-  }
-  private void OnCollisionExit(Collision collision)
-  {
-    //TODO: need to exit
-    if(_isWall.Contains(collision.gameObject))
-    {
-      isWall = false;
-    } else
+    if (!down && isGrounded)
     {
       isGrounded = false;
     }
+    if (!isWall && bottom && center)
+    {
+      isWall = true;
+    }
+    if (isWall && !bottom && !center)
+    {
+      isWall = false;
+    }
 
-    //var relativePosition = transform.InverseTransformPoint(collision.contacts[0].point);
-    //var angle = Vector3.Angle(relativePosition, transform.up);
-    //Debug.Log("collision exit" + angle);
-    //if (angle > 80)
-    //{
-    //  isGrounded = false;
-    //  //jumpCount = defaultJumpCount;
-    //}
-    //else
-    //{
-    //  isWall = false;
-    //}
 
-    //var relativePosition = transform.InverseTransformPoint(collision.transform.position);
-    //if (relativePosition.y < 0)
-    //{
-    //  isGrounded = false;
-    //}
-    //if (relativePosition.x != 0 && relativePosition.z != 0)
-    //{
-    //  isWall = false;
-    //}
-  }
-  //private Vector3 avg(ContactPoint[] cp)
-  //{
-  //  Vector3 v = Vector3.zero;
-  //  foreach(var c in cp)
-  //  {
-  //    v += c.point;
-  //  }
-  //  return v / cp.Length;
-  //}
-  private void checkCollision(Collision collision) {
-    
-
-  }
-  void FixedUpdate()
-  {
 
     var movementSpeed = runSpeed;
 
@@ -135,10 +127,11 @@ public class PlayerController : MonoBehaviour
     //{
     //  movementSpeed = runSpeed;
     //}
-    if(!isGrounded)
+    if (!isGrounded)
     {
       movementSpeed = airSpeed;
-    } if(Input.GetKey(KeyCode.LeftShift)) 
+    }
+    if (Input.GetKey(KeyCode.LeftShift))
     {
       movementSpeed = walkSpeed;
     }
@@ -152,10 +145,11 @@ public class PlayerController : MonoBehaviour
         //isGrounded = false;
         if (!isWall)
         {
-          this.GetComponent<Rigidbody>().AddForce(Quaternion.AngleAxis(-45, transform.up) * new Vector3(0, jumpSpeed, 0));
-        } else
+          rigidBody.AddForce(Quaternion.AngleAxis(-45, transform.up) * new Vector3(0, jumpSpeed, 0));
+        }
+        else
         {
-          this.GetComponent<Rigidbody>().AddForce(new Vector3(0, jumpSpeed, 0));
+          rigidBody.AddForce(new Vector3(0, jumpSpeed, 0));
         }
       }
     }
@@ -169,7 +163,7 @@ public class PlayerController : MonoBehaviour
 
       //Debug.Log(string.Format("horri {0}", horizontal));
       Vector3 v3SideForce = horizontal * transform.right;
-      this.GetComponent<Rigidbody>().transform.position += v3SideForce;
+      rigidBody.transform.position += v3SideForce;
     }
     if (horizontal > 0)
     {
@@ -180,8 +174,22 @@ public class PlayerController : MonoBehaviour
       PlayerState = PlayerAnimationState.StepRight;
 
     }
-    Vector3 v3Force = vertical * transform.forward;
-    this.GetComponent<Rigidbody>().transform.position += v3Force;
+    if (vertical != 0)
+    {
+
+      Vector3 v3Force = vertical * transform.forward;
+
+      if (!center && !bottom)
+      {
+        transform.position += v3Force;
+      }
+      else
+      {
+        Debug.Log("unable to go forward");
+      }
+    }
+
+
     //transform.Translate(0, 0, vertical);
     if (vertical < 0)
     {
@@ -227,4 +235,5 @@ public class PlayerController : MonoBehaviour
 
 
   }
+
 }

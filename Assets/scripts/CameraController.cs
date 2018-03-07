@@ -41,6 +41,11 @@ public class CameraController : MonoBehaviour
     correctedDistance = distance;
   }
 
+
+  private void Update()
+  {
+    
+  }
   // Update is called once per frame
   void LateUpdate()
   {
