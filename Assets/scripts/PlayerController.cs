@@ -99,8 +99,29 @@ public class PlayerController : MonoBehaviour
     var center = testCenter || testCenterLeft || testCenterRight;
     var bottom = testBottom || testBottomLeft || testBottomRight;
 
-    var down = testLine(rigidBody.worldCenterOfMass, rigidBody.worldCenterOfMass - ((height + 0.2f) * transform.up));
+    var innerDownCenter = rigidBody.worldCenterOfMass - (height * transform.up);
+    var outerDownCenter = innerDownCenter - (0.1f * transform.up);
 
+    var downPoint1Inner = innerDownCenter + (width * transform.right) + (depth * transform.forward);
+    var downPoint1Outer = downPoint1Inner - (0.1f * transform.up);
+
+    var downPoint2Inner = innerDownCenter - (width * transform.right) - (depth * transform.forward);
+    var downPoint2Outer = downPoint2Inner - (0.1f * transform.up);
+
+    var downPoint3Inner = innerDownCenter - (width * transform.right) + (depth * transform.forward);
+    var downPoint3Outer = downPoint3Inner - (0.1f * transform.up);
+
+    var downPoint4Inner = innerDownCenter + (width * transform.right) - (depth * transform.forward);
+    var downPoint4Outer = downPoint4Inner - (0.1f * transform.up);
+
+    var downCenter = testLine(rigidBody.worldCenterOfMass, rigidBody.worldCenterOfMass - ((height + 0.2f) * transform.up));
+
+    var downPoint1 = testLine(downPoint1Inner, downPoint1Outer);
+    var downPoint2 = testLine(downPoint2Inner, downPoint2Outer);
+    var downPoint3 = testLine(downPoint3Inner, downPoint3Outer);
+    var downPoint4 = testLine(downPoint4Inner, downPoint4Outer);
+
+    var down = downCenter || downPoint1 || downPoint2 || downPoint3 || downPoint4;
     if (down && !isGrounded)
     {
       isGrounded = true;
