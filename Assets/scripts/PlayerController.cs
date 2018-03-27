@@ -72,7 +72,7 @@ public class PlayerController : MonoBehaviour
 
   void FixedUpdate()
   {
-
+    // TODO: change this to ingame objects for the position rather then calculating it
     var boxCollider = this.GetComponent<BoxCollider>();
     var depth = (boxCollider.size.z / 2);
     var height = boxCollider.size.y / 2;
